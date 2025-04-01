@@ -11,7 +11,7 @@ import WidgetKit
 import SwiftUI
 
 struct Provider: TimelineProvider {
-    let appGroupIdentifier = "group.com.ChristianRiccio.FocusQuest" // Assicurati che sia lo stesso
+    let appGroupIdentifier = "group.com.ChristianRiccio.FocusQuest" 
 
     func placeholder(in context: Context) -> SimpleEntry {
         SimpleEntry(date: Date(), isTimerRunning: false, isWorking: true, timeRemaining: 25 * 60)
