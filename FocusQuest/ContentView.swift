@@ -4,7 +4,8 @@ import WidgetKit
 
 struct ContentView: View {
     let appGroupIdentifier: String = "group.com.ChristianRiccio.FocusQuest"
-    
+    private let flagCheckTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+
     @State private var workDurationMinutes = 10
     @State private var breakDurationMinutes = 5
     @State private var timeRemaining = 10 * 60
@@ -178,20 +179,35 @@ struct ContentView: View {
                 WidgetCenter.shared.reloadAllTimelines()
             }
             .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
+                print("Notifica di cambiamento UserDefaults ricevuta")
+                
                 if let sharedDefaults = UserDefaults(suiteName: appGroupIdentifier) {
-                    if sharedDefaults.bool(forKey: "widgetToggleTimer") {
+                    let widgetToggled = sharedDefaults.bool(forKey: "widgetToggleTimer")
+                    print("widgetToggleTimer flag: \(widgetToggled)")
+                    
+                    if widgetToggled {
                         let updatedTimerState = sharedDefaults.bool(forKey: "isTimerRunning")
-                        let updatedTimeRemaining = sharedDefaults.double(forKey: "timeRemaining")
-                        
-                        print("App riceve notifica: isTimerRunning=\(updatedTimerState), timeRemaining=\(updatedTimeRemaining)")
+                        print("Ricevuta richiesta di cambio stato timer a: \(updatedTimerState)")
                         
                         isTimerRunning = updatedTimerState
                         
-                        if updatedTimeRemaining > 0 {
-                            timeRemaining = Int(updatedTimeRemaining)
-                        } else if isTimerRunning {
-                            timeRemaining = isWorking ? workDurationMinutes * 60 : breakDurationMinutes * 60
-                        }
+                        sharedDefaults.set(false, forKey: "widgetToggleTimer")
+                        sharedDefaults.synchronize()
+                        
+                        print("Stato timer aggiornato a: \(isTimerRunning)")
+                        
+                        refreshWidget()
+                    }
+                }
+            }
+            .onReceive(flagCheckTimer) { _ in
+                if let sharedDefaults = UserDefaults(suiteName: appGroupIdentifier) {
+                    if sharedDefaults.bool(forKey: "widgetToggleTimer") {
+                        print("Flag widgetToggleTimer trovato attivo durante controllo periodico")
+                        
+                        let updatedTimerState = sharedDefaults.bool(forKey: "isTimerRunning")
+                        
+                        isTimerRunning = updatedTimerState
                         
                         sharedDefaults.set(false, forKey: "widgetToggleTimer")
                         sharedDefaults.synchronize()

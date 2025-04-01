@@ -74,22 +74,17 @@ struct ToggleTimerIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
+        print("Widget toggle intent eseguito")
+        
         if let sharedDefaults = UserDefaults(suiteName: "group.com.ChristianRiccio.FocusQuest") {
             let currentTimerState = sharedDefaults.bool(forKey: "isTimerRunning")
-            let isWorking = sharedDefaults.bool(forKey: "isWorking")
-            let defaultDuration: Double = isWorking ? 10 * 60 : 5 * 60
-            var timeRemaining = sharedDefaults.double(forKey: "timeRemaining")
-            
-            if (!currentTimerState && timeRemaining <= 0) {
-                timeRemaining = defaultDuration
-            }
             
             sharedDefaults.set(!currentTimerState, forKey: "isTimerRunning")
-            sharedDefaults.set(timeRemaining, forKey: "timeRemaining")
             sharedDefaults.set(true, forKey: "widgetToggleTimer")
-            sharedDefaults.synchronize()
             
-            print("Widget toggle: isTimerRunning=\(!currentTimerState), timeRemaining=\(timeRemaining)")
+            print("Widget ha impostato: isTimerRunning=\(!currentTimerState), widgetToggleTimer=true")
+            
+            sharedDefaults.synchronize()
         }
         
         WidgetCenter.shared.reloadAllTimelines()
