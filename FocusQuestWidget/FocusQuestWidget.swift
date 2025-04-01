@@ -74,15 +74,14 @@ struct ToggleTimerIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult {
-        print("Widget toggle intent eseguito")
-        
         if let sharedDefaults = UserDefaults(suiteName: "group.com.ChristianRiccio.FocusQuest") {
             let currentTimerState = sharedDefaults.bool(forKey: "isTimerRunning")
+            let newTimerState = !currentTimerState
             
-            sharedDefaults.set(!currentTimerState, forKey: "isTimerRunning")
+            print("Widget: cambio stato timer da \(currentTimerState) a \(newTimerState)")
+            
+            sharedDefaults.set(newTimerState, forKey: "isTimerRunning")
             sharedDefaults.set(true, forKey: "widgetToggleTimer")
-            
-            print("Widget ha impostato: isTimerRunning=\(!currentTimerState), widgetToggleTimer=true")
             
             sharedDefaults.synchronize()
         }

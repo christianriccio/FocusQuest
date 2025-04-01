@@ -148,7 +148,12 @@ struct ContentView: View {
             }
             .navigationBarHidden(true)
             .onReceive(timer) { _ in
-                guard isTimerRunning else { return }
+                print("Tick del timer - isTimerRunning = \(isTimerRunning)")
+                  
+                  guard isTimerRunning else {
+                      print("Timer in pausa, nessuna azione")
+                      return
+                  }
                 if timeRemaining > 0 {
                     timeRemaining -= 1
                     if timeRemaining % 10 == 0 { 
@@ -179,22 +184,22 @@ struct ContentView: View {
                 WidgetCenter.shared.reloadAllTimelines()
             }
             .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
-                print("Notifica di cambiamento UserDefaults ricevuta")
-                
                 if let sharedDefaults = UserDefaults(suiteName: appGroupIdentifier) {
-                    let widgetToggled = sharedDefaults.bool(forKey: "widgetToggleTimer")
-                    print("widgetToggleTimer flag: \(widgetToggled)")
-                    
-                    if widgetToggled {
+                    if sharedDefaults.bool(forKey: "widgetToggleTimer") {
                         let updatedTimerState = sharedDefaults.bool(forKey: "isTimerRunning")
-                        print("Ricevuta richiesta di cambio stato timer a: \(updatedTimerState)")
+                        print("Ricevuto comando dal widget: isTimerRunning = \(updatedTimerState)")
                         
-                        isTimerRunning = updatedTimerState
+                        DispatchQueue.main.async {
+                            isTimerRunning = updatedTimerState
+                            
+                            if !isTimerRunning {
+                                print("Timer messo in pausa da comando widget")
+                                
+                            }
+                        }
                         
                         sharedDefaults.set(false, forKey: "widgetToggleTimer")
                         sharedDefaults.synchronize()
-                        
-                        print("Stato timer aggiornato a: \(isTimerRunning)")
                         
                         refreshWidget()
                     }
