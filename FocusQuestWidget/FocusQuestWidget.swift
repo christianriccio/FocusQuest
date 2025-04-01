@@ -11,7 +11,7 @@ import WidgetKit
 import SwiftUI
 
 struct Provider: TimelineProvider {
-    let appGroupIdentifier = "group.com.ChristianRiccio.FocusQuest" 
+    let appGroupIdentifier = "group.com.ChristianRiccio.FocusQuest"
 
     func placeholder(in context: Context) -> SimpleEntry {
         SimpleEntry(date: Date(), isTimerRunning: false, isWorking: true, timeRemaining: 25 * 60)
@@ -53,6 +53,7 @@ struct FocusQuestWidgetEntryView : View {
     var body: some View {
         VStack {
             Text("FocusQuest")
+                .bold()
                 .font(.headline)
                 .padding(.bottom, 5)
 

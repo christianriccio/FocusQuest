@@ -50,7 +50,7 @@ struct ContentView: View {
                     
                     Spacer()
                     
-                    // Timer display con ombra e animazione
+                    
                     Text(formatTime(timeRemaining))
                         .font(.system(size: 80, weight: .thin))
                         .foregroundColor(.white)
