@@ -5,40 +5,46 @@
 //  Created by Christian Riccio on 01/04/25.
 //
 
+
+
 import WidgetKit
 import SwiftUI
 
-struct Provider: AppIntentTimelineProvider {
+struct Provider: TimelineProvider {
+    let appGroupIdentifier = "group.com.ChristianRiccio.FocusQuest" // Assicurati che sia lo stesso
+
     func placeholder(in context: Context) -> SimpleEntry {
-        SimpleEntry(date: Date(), configuration: ConfigurationAppIntent())
+        SimpleEntry(date: Date(), isTimerRunning: false, isWorking: true, timeRemaining: 25 * 60)
     }
 
-    func snapshot(for configuration: ConfigurationAppIntent, in context: Context) async -> SimpleEntry {
-        SimpleEntry(date: Date(), configuration: configuration)
-    }
-    
-    func timeline(for configuration: ConfigurationAppIntent, in context: Context) async -> Timeline<SimpleEntry> {
-        var entries: [SimpleEntry] = []
+    func getSnapshot(in context: Context, completion: @escaping (SimpleEntry) -> ()) {
+        let sharedDefaults = UserDefaults(suiteName: appGroupIdentifier)
+        let isTimerRunning = sharedDefaults?.bool(forKey: "isTimerRunning") ?? false
+        let isWorking = sharedDefaults?.bool(forKey: "isWorking") ?? true
+        let timeRemaining = sharedDefaults?.double(forKey: "timeRemaining") ?? 25 * 60
 
-        // Generate a timeline consisting of five entries an hour apart, starting from the current date.
-        let currentDate = Date()
-        for hourOffset in 0 ..< 5 {
-            let entryDate = Calendar.current.date(byAdding: .hour, value: hourOffset, to: currentDate)!
-            let entry = SimpleEntry(date: entryDate, configuration: configuration)
-            entries.append(entry)
-        }
-
-        return Timeline(entries: entries, policy: .atEnd)
+        let entry = SimpleEntry(date: Date(), isTimerRunning: isTimerRunning, isWorking: isWorking, timeRemaining: timeRemaining)
+        completion(entry)
     }
 
-//    func relevances() async -> WidgetRelevances<ConfigurationAppIntent> {
-//        // Generate a list containing the contexts this widget is relevant in.
-//    }
+    func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> ()) {
+        let sharedDefaults = UserDefaults(suiteName: appGroupIdentifier)
+        let isTimerRunning = sharedDefaults?.bool(forKey: "isTimerRunning") ?? false
+        let isWorking = sharedDefaults?.bool(forKey: "isWorking") ?? true
+        let timeRemaining = sharedDefaults?.double(forKey: "timeRemaining") ?? 25 * 60
+
+        let entry = SimpleEntry(date: Date(), isTimerRunning: isTimerRunning, isWorking: isWorking, timeRemaining: timeRemaining)
+
+        let timeline = Timeline(entries: [entry], policy: .atEnd)
+        completion(timeline)
+    }
 }
 
 struct SimpleEntry: TimelineEntry {
     let date: Date
-    let configuration: ConfigurationAppIntent
+    let isTimerRunning: Bool
+    let isWorking: Bool
+    let timeRemaining: TimeInterval
 }
 
 struct FocusQuestWidgetEntryView : View {
@@ -46,12 +52,26 @@ struct FocusQuestWidgetEntryView : View {
 
     var body: some View {
         VStack {
-            Text("Time:")
-            Text(entry.date, style: .time)
+            Text("FocusQuest")
+                .font(.headline)
+                .padding(.bottom, 5)
 
-            Text("Favorite Emoji:")
-            Text(entry.configuration.favoriteEmoji)
+            if entry.isTimerRunning {
+                Text(entry.isWorking ? "Lavoro" : "Pausa")
+                    .font(.subheadline)
+                Text(formatTime(entry.timeRemaining))
+                    .font(.title3)
+            } else {
+                Text("Timer Fermo")
+                    .font(.subheadline)
+            }
         }
+    }
+
+    func formatTime(_ totalSeconds: TimeInterval) -> String {
+        let minutes = Int(totalSeconds) / 60
+        let seconds = Int(totalSeconds) % 60
+        return String(format: "%02d:%02d", minutes, seconds)
     }
 }
 
@@ -59,30 +79,17 @@ struct FocusQuestWidget: Widget {
     let kind: String = "FocusQuestWidget"
 
     var body: some WidgetConfiguration {
-        AppIntentConfiguration(kind: kind, intent: ConfigurationAppIntent.self, provider: Provider()) { entry in
+        StaticConfiguration(kind: kind, provider: Provider()) { entry in
             FocusQuestWidgetEntryView(entry: entry)
                 .containerBackground(.fill.tertiary, for: .widget)
         }
-    }
-}
-
-extension ConfigurationAppIntent {
-    fileprivate static var smiley: ConfigurationAppIntent {
-        let intent = ConfigurationAppIntent()
-        intent.favoriteEmoji = "😀"
-        return intent
-    }
-    
-    fileprivate static var starEyes: ConfigurationAppIntent {
-        let intent = ConfigurationAppIntent()
-        intent.favoriteEmoji = "🤩"
-        return intent
+        .configurationDisplayName("FocusQuest Timer") // Nome visualizzato quando si aggiunge il widget
+        .description("Mostra lo stato del tuo timer FocusQuest.") // Descrizione visualizzata
     }
 }
 
 #Preview(as: .systemSmall) {
     FocusQuestWidget()
 } timeline: {
-    SimpleEntry(date: .now, configuration: .smiley)
-    SimpleEntry(date: .now, configuration: .starEyes)
+    SimpleEntry(date: .now, isTimerRunning: true, isWorking: true, timeRemaining: 25 * 60)
 }
