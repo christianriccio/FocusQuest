@@ -1,8 +1,9 @@
 import SwiftUI
 import UserNotifications
+import WidgetKit
 
 struct ContentView: View {
-    let appGroupIdentifier: String = "group.ChristianRiccio.FocusQuest"
+    let appGroupIdentifier: String = "group.com.ChristianRiccio.FocusQuest"
     
     @State private var workDurationMinutes = 10
     @State private var breakDurationMinutes = 5
@@ -22,6 +23,8 @@ struct ContentView: View {
         Curiosity(text: "Le banane sono tecnicamente delle bacche.", imageName: "placeholder", category: "Scienza"),
         Curiosity(text: "Il gatto è stato il primo animale domestico in Egitto.", imageName: "placeholder", category: "Storia")
     ]
+    
+    
     
     var body: some View {
         NavigationView {
@@ -45,12 +48,32 @@ struct ContentView: View {
                                 .font(.title2)
                                 .foregroundColor(.white)
                         }
+                        
+                       
                     }
                     .padding()
                     
                     Spacer()
                     
-                    
+                    Button {
+                        isTimerRunning = false
+                        timeRemaining = isWorking ? workDurationMinutes * 60 : breakDurationMinutes * 60
+                        
+                        if let sharedDefaults = UserDefaults(suiteName: appGroupIdentifier) {
+                            sharedDefaults.set(isTimerRunning, forKey: "isTimerRunning")
+                            sharedDefaults.set(timeRemaining, forKey: "timeRemaining")
+                            sharedDefaults.synchronize()
+                        }
+                        
+                        refreshWidget()
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.title2)
+                            .foregroundColor(.white)
+                            .padding()
+                            .background(Circle().fill(Color.black.opacity(0.3)))
+                    }
+                    .padding(.all, 10) 
                     Text(formatTime(timeRemaining))
                         .font(.system(size: 80, weight: .thin))
                         .foregroundColor(.white)
@@ -127,12 +150,16 @@ struct ContentView: View {
                 guard isTimerRunning else { return }
                 if timeRemaining > 0 {
                     timeRemaining -= 1
+                    if timeRemaining % 10 == 0 { 
+                               updateSharedDefaults()
+                           }
                 } else {
                     isTimerRunning = false
                     sendNotification()
                     isWorking.toggle()
                     timeRemaining = isWorking ? workDurationMinutes * 60 : breakDurationMinutes * 60
                     
+                    updateSharedDefaults()
                     if !isWorking {
                         let filteredCuriosities = selectedCategories.isEmpty ? curiosities : curiosities.filter { selectedCategories.contains($0.category) }
                         currentCuriosity = filteredCuriosities.randomElement()
@@ -140,15 +167,69 @@ struct ContentView: View {
                         currentCuriosity = nil
                     }
                 }
+                
                 if let sharedDefaults = UserDefaults(suiteName: appGroupIdentifier) {
                     sharedDefaults.set(isTimerRunning, forKey: "isTimerRunning")
                     sharedDefaults.set(isWorking, forKey: "isWorking")
                     sharedDefaults.set(timeRemaining, forKey: "timeRemaining")
+                    sharedDefaults.synchronize()
+                }
+                
+                WidgetCenter.shared.reloadAllTimelines()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
+                if let sharedDefaults = UserDefaults(suiteName: appGroupIdentifier) {
+                    if sharedDefaults.bool(forKey: "widgetToggleTimer") {
+                        let updatedTimerState = sharedDefaults.bool(forKey: "isTimerRunning")
+                        let updatedTimeRemaining = sharedDefaults.double(forKey: "timeRemaining")
+                        
+                        print("App riceve notifica: isTimerRunning=\(updatedTimerState), timeRemaining=\(updatedTimeRemaining)")
+                        
+                        isTimerRunning = updatedTimerState
+                        
+                        if updatedTimeRemaining > 0 {
+                            timeRemaining = Int(updatedTimeRemaining)
+                        } else if isTimerRunning {
+                            timeRemaining = isWorking ? workDurationMinutes * 60 : breakDurationMinutes * 60
+                        }
+                        
+                        sharedDefaults.set(false, forKey: "widgetToggleTimer")
+                        sharedDefaults.synchronize()
+                        
+                        refreshWidget()
+                    }
                 }
             }
             .onAppear {
+                
+                print("App avviata - App Group: \(appGroupIdentifier)")
+                if UserDefaults(suiteName: appGroupIdentifier) != nil {
+                    print("UserDefaults trovato!")
+                } else {
+                    print("ERRORE: UserDefaults NON trovato!")
+                }
                 requestNotificationAuthorization()
-                timeRemaining = workDurationMinutes * 60
+                
+                if let sharedDefaults = UserDefaults(suiteName: appGroupIdentifier) {
+                    let widgetTimerRunning = sharedDefaults.bool(forKey: "isTimerRunning")
+                    let widgetTimeRemaining = sharedDefaults.double(forKey: "timeRemaining")
+                    
+                    if widgetTimerRunning && widgetTimeRemaining > 0 {
+                        isTimerRunning = true
+                        timeRemaining = Int(widgetTimeRemaining)
+                    } else {
+                        timeRemaining = workDurationMinutes * 60
+                        
+                        sharedDefaults.set(isTimerRunning, forKey: "isTimerRunning")
+                        sharedDefaults.set(isWorking, forKey: "isWorking")
+                        sharedDefaults.set(timeRemaining, forKey: "timeRemaining")
+                        sharedDefaults.synchronize()
+                    }
+                } else {
+                    timeRemaining = workDurationMinutes * 60
+                }
+                
+                refreshWidget()
             }
             .sheet(isPresented: $showingSettings) {
                 SettingsView(workDurationMinutes: $workDurationMinutes,
@@ -160,6 +241,29 @@ struct ContentView: View {
             }
         }
     }
+    
+    
+    private func updateSharedDefaults() {
+        if let sharedDefaults = UserDefaults(suiteName: appGroupIdentifier) {
+            print("Prima dell'aggiornamento - isTimerRunning: \(sharedDefaults.bool(forKey: "isTimerRunning")), timeRemaining: \(sharedDefaults.double(forKey: "timeRemaining"))")
+            
+            sharedDefaults.set(isTimerRunning, forKey: "isTimerRunning")
+            sharedDefaults.set(isWorking, forKey: "isWorking")
+            sharedDefaults.set(Double(timeRemaining), forKey: "timeRemaining")
+            sharedDefaults.synchronize()
+            
+            print("Dopo l'aggiornamento - isTimerRunning: \(sharedDefaults.bool(forKey: "isTimerRunning")), timeRemaining: \(sharedDefaults.double(forKey: "timeRemaining"))")
+            
+            WidgetCenter.shared.reloadAllTimelines()
+        } else {
+            print("ERRORE: Impossibile accedere a UserDefaults con identifier: \(appGroupIdentifier)")
+        }
+    }
+    
+    private func refreshWidget() {
+        WidgetCenter.shared.reloadAllTimelines()
+    }
+
     
     func formatTime(_ totalSeconds: Int) -> String {
         let minutes = totalSeconds / 60

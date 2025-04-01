@@ -49,8 +49,16 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
+				TimerAppIntent.swift,
 			);
 			target = 1A84E3192D9C5268008C5147 /* FocusQuestWidgetExtension */;
+		};
+		1A84E3752D9C9431008C5147 /* Exceptions for "FocusQuestWidget" folder in "FocusQuest" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				TimerAppIntent.swift,
+			);
+			target = 1AC9542D2D9C330800B5FD7E /* FocusQuest */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -58,6 +66,7 @@
 		1A84E3202D9C5268008C5147 /* FocusQuestWidget */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
+				1A84E3752D9C9431008C5147 /* Exceptions for "FocusQuestWidget" folder in "FocusQuest" target */,
 				1A84E3312D9C526A008C5147 /* Exceptions for "FocusQuestWidget" folder in "FocusQuestWidgetExtension" target */,
 			);
 			path = FocusQuestWidget;
